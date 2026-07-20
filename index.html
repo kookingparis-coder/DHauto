@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DHauto — Factures</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="lock-screen" class="lock-screen hidden" aria-live="polite">
+    <div class="lock-card">
+      <img src="assets/logo.png" alt="DHauto" class="lock-logo" />
+      <h1>Accès DHauto</h1>
+      <p>Entrez votre code pour ouvrir l’outil factures.</p>
+      <form id="lock-form">
+        <label for="pin-input">Code d’accès</label>
+        <input id="pin-input" type="password" inputmode="numeric" autocomplete="current-password" required />
+        <p id="lock-error" class="error hidden">Code incorrect.</p>
+        <button type="submit" class="btn btn-primary">Entrer</button>
+      </form>
+      <form id="setup-pin-form" class="hidden">
+        <label for="setup-pin">Créez un code (4 à 8 chiffres)</label>
+        <input id="setup-pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" required />
+        <label for="setup-pin-confirm">Confirmez le code</label>
+        <input id="setup-pin-confirm" type="password" inputmode="numeric" pattern="[0-9]{4,8}" required />
+        <p id="setup-error" class="error hidden">Les codes ne correspondent pas.</p>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="app" class="app hidden">
+    <header class="app-header">
+      <div class="brand">
+        <img src="assets/logo.png" alt="DHauto" class="brand-logo" />
+        <div>
+          <strong>DHauto</strong>
+          <span>Facturation garage</span>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="create" role="tab" aria-selected="true">Nouvelle facture</button>
+        <button type="button" class="tab" data-tab="history" role="tab" aria-selected="false">Historique</button>
+      </nav>
+      <button type="button" id="logout-btn" class="btn btn-ghost" title="Verrouiller">Verrouiller</button>
+    </header>
+
+    <main>
+      <section id="tab-create" class="panel active" role="tabpanel">
+        <form id="invoice-form" class="form-grid">
+          <fieldset class="card">
+            <legend>Client</legend>
+            <div class="field">
+              <label for="client-name">Nom / société *</label>
+              <input id="client-name" name="clientName" required autocomplete="name" />
+            </div>
+            <div class="field">
+              <label for="client-address">Adresse *</label>
+              <input id="client-address" name="clientAddress" required autocomplete="street-address" />
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="client-zip">Code postal *</label>
+                <input id="client-zip" name="clientZip" required autocomplete="postal-code" inputmode="numeric" maxlength="5" placeholder="60570" />
+                <span id="zip-hint" class="field-hint">La ville se remplit toute seule.</span>
+              </div>
+              <div class="field grow">
+                <label for="client-city">Ville *</label>
+                <input id="client-city" name="clientCity" required autocomplete="address-level2" list="city-suggestions" />
+                <datalist id="city-suggestions"></datalist>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="client-phone">Téléphone (facultatif)</label>
+                <input id="client-phone" name="clientPhone" type="tel" autocomplete="tel" />
+              </div>
+              <div class="field grow">
+                <label for="client-email">Email (facultatif)</label>
+                <input id="client-email" name="clientEmail" type="email" autocomplete="email" />
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend>Véhicule</legend>
+            <p class="hint">Remplissez seulement ce que vous avez sous la main.</p>
+            <div class="row">
+              <div class="field grow">
+                <label for="car-plate">Immatriculation *</label>
+                <input id="car-plate" name="carPlate" required placeholder="AB-123-CD" class="plate" />
+              </div>
+              <div class="field">
+                <label for="car-km">Kilométrage (facultatif)</label>
+                <input id="car-km" name="carKm" type="number" min="0" step="1" placeholder="ex. 120000" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="field grow">
+                <label for="car-brand">Marque (facultatif)</label>
+                <input id="car-brand" name="carBrand" placeholder="ex. Peugeot" list="brand-list" />
+                <datalist id="brand-list">
+                  <option value="Peugeot"></option>
+                  <option value="Renault"></option>
+                  <option value="Citroën"></option>
+                  <option value="Volkswagen"></option>
+                  <option value="Audi"></option>
+                  <option value="BMW"></option>
+                  <option value="Mercedes"></option>
+                  <option value="Toyota"></option>
+                  <option value="Ford"></option>
+                  <option value="Opel"></option>
+                  <option value="Fiat"></option>
+                  <option value="Dacia"></option>
+                  <option value="Hyundai"></option>
+                  <option value="Kia"></option>
+                  <option value="Nissan"></option>
+                  <option value="Seat"></option>
+                  <option value="Skoda"></option>
+                  <option value="Tesla"></option>
+                </datalist>
+              </div>
+              <div class="field grow">
+                <label for="car-model">Modèle (facultatif)</label>
+                <input id="car-model" name="carModel" placeholder="ex. 308" />
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend>Prestations & montants</legend>
+            <p class="hint">Ajoutez autant de lignes que nécessaire (ex. pièces + main d’œuvre).</p>
+            <div id="service-lines" class="service-lines"></div>
+            <button type="button" id="add-line-btn" class="btn add-line-btn">+ Ajouter une prestation</button>
+            <div class="totals-live invoice-live-totals">
+              <span>Total HT</span>
+              <strong id="live-ht">0,00 €</strong>
+              <span>TVA 20 %</span>
+              <strong id="live-tva">0,00 €</strong>
+              <span>Total TTC</span>
+              <strong id="live-ttc">0,00 €</strong>
+            </div>
+            <div class="field">
+              <label for="invoice-date">Date de facture *</label>
+              <input id="invoice-date" name="invoiceDate" type="date" required />
+            </div>
+            <div class="field">
+              <label for="notes">Notes / observations (facultatif)</label>
+              <textarea id="notes" name="notes" rows="2" placeholder="Facultatif"></textarea>
+            </div>
+          </fieldset>
+
+          <div class="actions">
+            <button type="button" id="preview-btn" class="btn btn-secondary">Aperçu</button>
+            <button type="submit" class="btn btn-primary">Enregistrer & générer</button>
+          </div>
+        </form>
+
+        <aside id="invoice-preview" class="preview-wrap" aria-label="Aperçu de la facture">
+          <div class="preview-toolbar no-print">
+            <button type="button" id="print-btn" class="btn btn-primary" disabled>Imprimer / PDF</button>
+            <button type="button" id="reset-btn" class="btn btn-ghost">Réinitialiser</button>
+          </div>
+          <div id="invoice-sheet" class="invoice-sheet empty">
+            <p class="empty-msg">Remplissez le formulaire puis cliquez sur « Aperçu » ou « Enregistrer & générer ».</p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="tab-history" class="panel" role="tabpanel" hidden>
+        <div class="history-toolbar">
+          <h2>Historique des factures</h2>
+          <div class="history-actions">
+            <button type="button" id="export-btn" class="btn btn-secondary">Exporter sauvegarde</button>
+            <label class="btn btn-ghost file-btn">
+              Importer
+              <input type="file" id="import-input" accept="application/json,.json" hidden />
+            </label>
+          </div>
+        </div>
+
+        <div class="history-layout">
+          <aside class="calendar-card" aria-label="Calendrier des factures">
+            <div class="calendar-header">
+              <button type="button" id="cal-prev" class="btn btn-ghost cal-nav" aria-label="Mois précédent">‹</button>
+              <h3 id="cal-title">Mois</h3>
+              <button type="button" id="cal-next" class="btn btn-ghost cal-nav" aria-label="Mois suivant">›</button>
+            </div>
+            <div class="calendar-weekdays" aria-hidden="true">
+              <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+            <div class="calendar-footer">
+              <p id="cal-filter-label" class="cal-filter-label">Toutes les factures</p>
+              <button type="button" id="cal-clear" class="btn btn-secondary">Voir tout</button>
+            </div>
+            <p class="cal-hint">Les jours en rouge ont des factures — cliquez pour filtrer.</p>
+          </aside>
+          <div id="history-list" class="history-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
