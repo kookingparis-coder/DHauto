@@ -566,37 +566,73 @@ function unlockApp() {
 function lockApp() {
   localStorage.removeItem(UNLOCK_KEY);
   document.getElementById("app").classList.add("hidden");
-  document.getElementById("lock-screen").classList.remove("hidden");
-  const pin = document.getElementById("pin-input");
-  if (pin) pin.value = "";
-  document.getElementById("lock-error").classList.add("hidden");
-  setTimeout(() => pin && pin.focus(), 50);
+  const lockScreen = document.getElementById("lock-screen");
+  lockScreen.classList.remove("hidden");
+  buildLockScreen();
+}
+
+function buildLockScreen() {
+  const lockScreen = document.getElementById("lock-screen");
+  lockScreen.innerHTML = `
+    <div class="lock-card" style="width:min(100%,400px);background:#fff;border:2px solid #111;border-radius:16px;padding:28px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.08);">
+      <img src="assets/logo.png" alt="DHauto" width="96" height="96" style="border-radius:50%;background:#000;object-fit:contain;" />
+      <h1 style="margin:14px 0 6px;font-size:28px;">Accès DHauto</h1>
+      <p style="margin:0 0 16px;color:#5c5c5c;">Entrez le code d’accès pour ouvrir l’outil factures.</p>
+      <div style="text-align:left;">
+        <label for="access-code-input" style="display:block;font-weight:700;margin:0 0 8px;">Code d’accès</label>
+        <input
+          id="access-code-input"
+          type="text"
+          inputmode="numeric"
+          maxlength="8"
+          placeholder="Tapez le code ici"
+          style="display:block !important;visibility:visible !important;opacity:1 !important;width:100%;height:56px;min-height:56px;padding:12px 14px;border:3px solid #c8102e;border-radius:8px;background:#fff;color:#111;font-size:24px;text-align:center;box-sizing:border-box;"
+        />
+        <p id="lock-error" style="display:none;color:#c8102e;font-weight:700;text-align:center;margin:10px 0 0;">Code incorrect.</p>
+        <button
+          id="access-code-btn"
+          type="button"
+          style="display:block;width:100%;margin-top:14px;height:48px;border:0;border-radius:8px;background:#c8102e;color:#fff;font-size:18px;font-weight:700;cursor:pointer;"
+        >Entrer</button>
+      </div>
+    </div>
+  `;
+
+  const input = document.getElementById("access-code-input");
+  const error = document.getElementById("lock-error");
+  const btn = document.getElementById("access-code-btn");
+
+  const submitCode = () => {
+    const value = (input.value || "").trim();
+    if (value === ACCESS_CODE) {
+      error.style.display = "none";
+      unlockApp();
+      return;
+    }
+    error.style.display = "block";
+    input.value = "";
+    input.focus();
+  };
+
+  btn.onclick = submitCode;
+  input.onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitCode();
+    }
+  };
+
+  setTimeout(() => input.focus(), 80);
 }
 
 function initAuth() {
-  const lockScreen = document.getElementById("lock-screen");
-  const lockForm = document.getElementById("lock-form");
-  const pinInput = document.getElementById("pin-input");
-
-  lockForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const value = pinInput.value.trim();
-    if (value === ACCESS_CODE) {
-      unlockApp();
-    } else {
-      document.getElementById("lock-error").classList.remove("hidden");
-      pinInput.value = "";
-      pinInput.focus();
-    }
-  });
-
   if (localStorage.getItem(UNLOCK_KEY) === "1") {
     unlockApp();
-  } else {
-    lockScreen.classList.remove("hidden");
-    document.getElementById("app").classList.add("hidden");
-    setTimeout(() => pinInput.focus(), 50);
+    return;
   }
+  document.getElementById("lock-screen").classList.remove("hidden");
+  document.getElementById("app").classList.add("hidden");
+  buildLockScreen();
 }
 
 function initServices() {
