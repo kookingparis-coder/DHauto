@@ -110,10 +110,10 @@ function calcTotals(ht) {
 
 function escapeHtml(str) {
   return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function serviceOptionsHtml(selected = "") {
@@ -602,10 +602,14 @@ function initServices() {
 }
 
 function init() {
-  initServices();
   initAuth();
-  document.getElementById("invoice-date").value = todayIso();
-  updateLiveTotals();
+  try {
+    initServices();
+    document.getElementById("invoice-date").value = todayIso();
+    updateLiveTotals();
+  } catch (err) {
+    console.error(err);
+  }
 
   document.querySelectorAll(".tab").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));

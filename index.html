@@ -10,14 +10,23 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="lock-screen" class="lock-screen hidden" aria-live="polite">
+  <div id="lock-screen" class="lock-screen" aria-live="polite">
     <div class="lock-card">
       <img src="assets/logo.png" alt="DHauto" class="lock-logo" />
       <h1>Accès DHauto</h1>
       <p>Entrez le code d’accès pour ouvrir l’outil factures.</p>
       <form id="lock-form">
         <label for="pin-input">Code d’accès</label>
-        <input id="pin-input" type="password" inputmode="numeric" autocomplete="current-password" required />
+        <input
+          id="pin-input"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          maxlength="8"
+          autocomplete="one-time-code"
+          placeholder="Entrez le code ici"
+          required
+        />
         <p id="lock-error" class="error hidden">Code incorrect.</p>
         <button type="submit" class="btn btn-primary">Entrer</button>
       </form>
