@@ -47,11 +47,11 @@ button, input, select, textarea {
 }
 
 .lock-card {
-  width: min(100%, 380px);
+  width: min(100%, 400px);
   background: #fff;
   border: 2px solid #111;
   border-radius: 16px;
-  padding: 24px;
+  padding: 28px;
   box-shadow: var(--shadow);
   text-align: center;
 }
@@ -73,70 +73,22 @@ button, input, select, textarea {
 
 .lock-card > p {
   color: var(--muted);
-  margin: 0 0 14px;
+  margin: 0 0 16px;
 }
 
-.pin-display {
-  min-height: 56px;
-  margin: 0 0 12px;
-  padding: 12px;
-  border: 3px solid #111;
-  border-radius: 10px;
-  background: #111;
-  color: #fff;
-  font-size: 2rem;
-  letter-spacing: 0.35em;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
+#lock-form {
+  display: block;
+  width: 100%;
+  text-align: left;
 }
 
-.pin-pad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-.pin-key {
-  min-height: 58px;
-  border: 2px solid #111;
-  border-radius: 10px;
-  background: #fff;
-  color: #111;
-  font-size: 1.4rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.pin-key:hover,
-.pin-key:active {
-  background: #111;
-  color: #fff;
-}
-
-.pin-key-action {
-  font-size: 0.85rem;
-  background: #eee;
-}
-
-.pin-key-ok {
-  background: var(--red);
-  border-color: var(--red);
-  color: #fff;
-}
-
-.pin-key-ok:hover,
-.pin-key-ok:active {
-  background: var(--red-dark);
-  border-color: var(--red-dark);
-  color: #fff;
-}
-
+#error,
 .error {
   color: var(--red);
   font-size: 0.95rem;
   font-weight: 600;
-  margin: 0 0 10px;
+  margin: 10px 0 0;
+  text-align: center;
 }
 
 .app {

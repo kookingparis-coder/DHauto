@@ -567,78 +567,26 @@ function lockApp() {
   localStorage.removeItem(UNLOCK_KEY);
   document.getElementById("app").classList.add("hidden");
   document.getElementById("lock-screen").classList.remove("hidden");
-  pinBuffer = "";
-  updatePinDisplay();
+  const pin = document.getElementById("pin-input");
+  if (pin) pin.value = "";
   document.getElementById("lock-error").classList.add("hidden");
-}
-
-let pinBuffer = "";
-
-function updatePinDisplay() {
-  const display = document.getElementById("pin-display");
-  const input = document.getElementById("pin-input");
-  if (input) input.value = pinBuffer;
-  if (!display) return;
-  display.textContent = pinBuffer.length ? "•".repeat(pinBuffer.length) : "····";
-}
-
-function tryUnlock() {
-  const err = document.getElementById("lock-error");
-  if (pinBuffer === ACCESS_CODE) {
-    err.classList.add("hidden");
-    unlockApp();
-    return;
-  }
-  err.classList.remove("hidden");
-  pinBuffer = "";
-  updatePinDisplay();
+  setTimeout(() => pin && pin.focus(), 50);
 }
 
 function initAuth() {
   const lockScreen = document.getElementById("lock-screen");
-  const pad = document.getElementById("pin-pad");
+  const lockForm = document.getElementById("lock-form");
+  const pinInput = document.getElementById("pin-input");
 
-  updatePinDisplay();
-
-  pad.addEventListener("click", (e) => {
-    const btn = e.target.closest(".pin-key");
-    if (!btn) return;
-    const key = btn.dataset.key;
-    document.getElementById("lock-error").classList.add("hidden");
-
-    if (key === "clear") {
-      pinBuffer = "";
-      updatePinDisplay();
-      return;
-    }
-    if (key === "ok") {
-      tryUnlock();
-      return;
-    }
-    if (pinBuffer.length >= 8) return;
-    pinBuffer += key;
-    updatePinDisplay();
-    if (pinBuffer.length === ACCESS_CODE.length) {
-      tryUnlock();
-    }
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (document.getElementById("lock-screen").classList.contains("hidden")) return;
-    if (e.key >= "0" && e.key <= "9") {
-      e.preventDefault();
-      if (pinBuffer.length >= 8) return;
-      pinBuffer += e.key;
-      updatePinDisplay();
-      document.getElementById("lock-error").classList.add("hidden");
-      if (pinBuffer.length === ACCESS_CODE.length) tryUnlock();
-    } else if (e.key === "Backspace") {
-      e.preventDefault();
-      pinBuffer = pinBuffer.slice(0, -1);
-      updatePinDisplay();
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      tryUnlock();
+  lockForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const value = pinInput.value.trim();
+    if (value === ACCESS_CODE) {
+      unlockApp();
+    } else {
+      document.getElementById("lock-error").classList.remove("hidden");
+      pinInput.value = "";
+      pinInput.focus();
     }
   });
 
@@ -647,6 +595,7 @@ function initAuth() {
   } else {
     lockScreen.classList.remove("hidden");
     document.getElementById("app").classList.add("hidden");
+    setTimeout(() => pinInput.focus(), 50);
   }
 }
 

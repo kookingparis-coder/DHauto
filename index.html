@@ -14,25 +14,29 @@
     <div class="lock-card">
       <img src="assets/logo.png" alt="DHauto" class="lock-logo" />
       <h1>Accès DHauto</h1>
-      <p>Tapez le code d’accès avec les boutons ci-dessous.</p>
-      <div id="pin-display" class="pin-display" aria-live="polite">····</div>
-      <p id="lock-error" class="error hidden">Code incorrect.</p>
-      <div class="pin-pad" id="pin-pad" role="group" aria-label="Clavier code d’accès">
-        <button type="button" class="pin-key" data-key="1">1</button>
-        <button type="button" class="pin-key" data-key="2">2</button>
-        <button type="button" class="pin-key" data-key="3">3</button>
-        <button type="button" class="pin-key" data-key="4">4</button>
-        <button type="button" class="pin-key" data-key="5">5</button>
-        <button type="button" class="pin-key" data-key="6">6</button>
-        <button type="button" class="pin-key" data-key="7">7</button>
-        <button type="button" class="pin-key" data-key="8">8</button>
-        <button type="button" class="pin-key" data-key="9">9</button>
-        <button type="button" class="pin-key pin-key-action" data-key="clear">Effacer</button>
-        <button type="button" class="pin-key" data-key="0">0</button>
-        <button type="button" class="pin-key pin-key-ok" data-key="ok">OK</button>
-      </div>
-      <!-- champ caché pour compatibilité -->
-      <input id="pin-input" type="text" inputmode="numeric" maxlength="8" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1" aria-hidden="true" />
+      <p>Entrez le code d’accès pour ouvrir l’outil factures.</p>
+      <form id="lock-form" autocomplete="off">
+        <label for="pin-input" style="display:block;text-align:left;font-weight:700;margin:0 0 8px;">Code d’accès</label>
+        <input
+          id="pin-input"
+          name="pin"
+          type="text"
+          inputmode="numeric"
+          maxlength="8"
+          autocomplete="off"
+          placeholder="6084"
+          required
+          style="display:block;width:100%;height:56px;padding:12px 14px;border:3px solid #111;border-radius:8px;background:#fff;color:#111;font-size:28px;letter-spacing:8px;text-align:center;box-sizing:border-box;"
+        />
+        <p id="lock-error" class="error hidden">Code incorrect.</p>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          style="display:block;width:100%;margin-top:14px;height:48px;font-size:18px;font-weight:700;"
+        >
+          Entrer
+        </button>
+      </form>
     </div>
   </div>
 
