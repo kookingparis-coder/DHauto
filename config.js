@@ -1,8 +1,9 @@
 // Remplis ces 2 valeurs après avoir créé le projet Supabase (gratuit).
 // Voir les étapes dans le message / en bas de ce fichier.
 window.DHAUTO_CONFIG = {
-  supabaseUrl: "", // ex: https://xxxxx.supabase.co
-  supabaseKey: "", // clé "anon" / "public"
+  supabaseUrl: "https://wtqqtqdbmlevopstpzcs.supabase.co",
+  supabaseKey:
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0cXF0cWRibWxldm9wc3RwemNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NDQ0MzcsImV4cCI6MjEwMDEyMDQzN30.2Ui_wQiHBDD5NpQfIQnoOQi7mglfgVnCVt1BGgvEgiU",
 };
 
 /*
