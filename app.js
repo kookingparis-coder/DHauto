@@ -141,10 +141,19 @@ function rowToInvoice(row) {
   };
 }
 
+function newInvoiceId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `inv-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 async function fetchInvoicesFromCloud() {
   const cfg = getCloudConfig();
+  const local = loadInvoicesLocal();
+
   if (!cfg) {
-    invoiceCache = loadInvoicesLocal();
+    invoiceCache = local;
     setSyncStatus(
       "Mode local : chaque appareil a son propre historique. Configurez le partage cloud pour tout voir ensemble.",
       "warn"
@@ -153,23 +162,47 @@ async function fetchInvoicesFromCloud() {
   }
 
   setSyncStatus("Synchronisation en cours…");
-  const res = await fetch(
-    `${cfg.url}/rest/v1/invoices?select=*&order=created_at.desc`,
-    { headers: cloudHeaders(cfg.key) }
-  );
-  if (!res.ok) {
-    const detail = await res.text();
-    console.error("Cloud fetch failed", res.status, detail);
-    invoiceCache = loadInvoicesLocal();
-    setSyncStatus("Erreur cloud — affichage de la copie locale.", "err");
+  try {
+    const res = await fetch(
+      `${cfg.url}/rest/v1/invoices?select=*&order=created_at.desc`,
+      { headers: cloudHeaders(cfg.key) }
+    );
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error("Cloud fetch failed", res.status, detail);
+      invoiceCache = local;
+      setSyncStatus("Erreur cloud — affichage de la copie locale.", "err");
+      return invoiceCache;
+    }
+
+    const rows = await res.json();
+    const byId = new Map(rows.map((row) => {
+      const inv = rowToInvoice(row);
+      return [inv.id, inv];
+    }));
+
+    // Envoie vers le cloud les factures encore seulement locales (ex: téléphone)
+    const missing = local.filter((inv) => inv && inv.id && !byId.has(inv.id));
+    if (missing.length) {
+      await syncInvoicesToCloud(missing);
+      missing.forEach((inv) => byId.set(inv.id, inv));
+    }
+
+    const list = [...byId.values()].sort(
+      (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+    );
+    saveInvoicesLocal(list);
+    setSyncStatus(
+      `Historique partagé en ligne (${list.length} facture${list.length > 1 ? "s" : ""}).`,
+      "ok"
+    );
+    return list;
+  } catch (err) {
+    console.error(err);
+    invoiceCache = local;
+    setSyncStatus("Hors ligne — copie locale affichée.", "warn");
     return invoiceCache;
   }
-
-  const rows = await res.json();
-  const list = rows.map(rowToInvoice);
-  saveInvoicesLocal(list);
-  setSyncStatus("Historique partagé en ligne — visible sur tous les appareils.", "ok");
-  return list;
 }
 
 async function upsertInvoiceCloud(inv) {
@@ -878,7 +911,7 @@ function init() {
     await fetchInvoicesFromCloud();
     const invoices = loadInvoices();
     const data = {
-      id: crypto.randomUUID(),
+      id: newInvoiceId(),
       number: nextInvoiceNumber(invoices),
       createdAt: Date.now(),
       ...readForm(),
@@ -893,6 +926,13 @@ function init() {
           : "Facture sauvée en local, mais l’envoi cloud a échoué.",
         ok ? "ok" : "err"
       );
+      if (!ok) {
+        alert(
+          "Attention : la facture est sur cet appareil, mais pas encore partagée en ligne.\nVérifiez la connexion puis ouvrez Historique → Actualiser."
+        );
+      }
+    } else {
+      alert("Cloud non configuré : la facture reste seulement sur cet appareil.");
     }
     showInvoice(data);
     switchTab("create");
