@@ -14,22 +14,25 @@
     <div class="lock-card">
       <img src="assets/logo.png" alt="DHauto" class="lock-logo" />
       <h1>Accès DHauto</h1>
-      <p>Entrez le code d’accès pour ouvrir l’outil factures.</p>
-      <form id="lock-form">
-        <label for="pin-input">Code d’accès</label>
-        <input
-          id="pin-input"
-          type="text"
-          inputmode="numeric"
-          pattern="[0-9]*"
-          maxlength="8"
-          autocomplete="one-time-code"
-          placeholder="Entrez le code ici"
-          required
-        />
-        <p id="lock-error" class="error hidden">Code incorrect.</p>
-        <button type="submit" class="btn btn-primary">Entrer</button>
-      </form>
+      <p>Tapez le code d’accès avec les boutons ci-dessous.</p>
+      <div id="pin-display" class="pin-display" aria-live="polite">····</div>
+      <p id="lock-error" class="error hidden">Code incorrect.</p>
+      <div class="pin-pad" id="pin-pad" role="group" aria-label="Clavier code d’accès">
+        <button type="button" class="pin-key" data-key="1">1</button>
+        <button type="button" class="pin-key" data-key="2">2</button>
+        <button type="button" class="pin-key" data-key="3">3</button>
+        <button type="button" class="pin-key" data-key="4">4</button>
+        <button type="button" class="pin-key" data-key="5">5</button>
+        <button type="button" class="pin-key" data-key="6">6</button>
+        <button type="button" class="pin-key" data-key="7">7</button>
+        <button type="button" class="pin-key" data-key="8">8</button>
+        <button type="button" class="pin-key" data-key="9">9</button>
+        <button type="button" class="pin-key pin-key-action" data-key="clear">Effacer</button>
+        <button type="button" class="pin-key" data-key="0">0</button>
+        <button type="button" class="pin-key pin-key-ok" data-key="ok">OK</button>
+      </div>
+      <!-- champ caché pour compatibilité -->
+      <input id="pin-input" type="text" inputmode="numeric" maxlength="8" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1" aria-hidden="true" />
     </div>
   </div>
 
