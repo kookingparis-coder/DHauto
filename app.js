@@ -58,8 +58,8 @@ const SERVICES = [
 ];
 
 const STORAGE_KEY = "dhauto_invoices_v1";
-const PIN_KEY = "dhauto_pin_v1";
-const SESSION_KEY = "dhauto_unlocked";
+const UNLOCK_KEY = "dhauto_unlocked_v1";
+const ACCESS_CODE = "6084";
 
 const euro = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -558,13 +558,13 @@ function switchTab(name) {
 }
 
 function unlockApp() {
-  sessionStorage.setItem(SESSION_KEY, "1");
+  localStorage.setItem(UNLOCK_KEY, "1");
   document.getElementById("lock-screen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
 }
 
 function lockApp() {
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(UNLOCK_KEY);
   document.getElementById("app").classList.add("hidden");
   document.getElementById("lock-screen").classList.remove("hidden");
   document.getElementById("pin-input").value = "";
@@ -572,48 +572,25 @@ function lockApp() {
 }
 
 function initAuth() {
-  const pin = localStorage.getItem(PIN_KEY);
   const lockScreen = document.getElementById("lock-screen");
   const lockForm = document.getElementById("lock-form");
-  const setupForm = document.getElementById("setup-pin-form");
-
-  lockScreen.classList.remove("hidden");
-
-  if (!pin) {
-    lockForm.classList.add("hidden");
-    setupForm.classList.remove("hidden");
-  } else if (sessionStorage.getItem(SESSION_KEY) === "1") {
-    unlockApp();
-  } else {
-    lockForm.classList.remove("hidden");
-    setupForm.classList.add("hidden");
-  }
-
-  setupForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const a = document.getElementById("setup-pin").value;
-    const b = document.getElementById("setup-pin-confirm").value;
-    const err = document.getElementById("setup-error");
-    if (a !== b || !/^\d{4,8}$/.test(a)) {
-      err.textContent = !/^\d{4,8}$/.test(a)
-        ? "Le code doit contenir 4 à 8 chiffres."
-        : "Les codes ne correspondent pas.";
-      err.classList.remove("hidden");
-      return;
-    }
-    localStorage.setItem(PIN_KEY, a);
-    unlockApp();
-  });
 
   lockForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    const value = document.getElementById("pin-input").value;
-    if (value === localStorage.getItem(PIN_KEY)) {
+    const value = document.getElementById("pin-input").value.trim();
+    if (value === ACCESS_CODE) {
       unlockApp();
     } else {
       document.getElementById("lock-error").classList.remove("hidden");
     }
   });
+
+  if (localStorage.getItem(UNLOCK_KEY) === "1") {
+    unlockApp();
+  } else {
+    lockScreen.classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
+  }
 }
 
 function initServices() {

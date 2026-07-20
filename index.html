@@ -14,20 +14,12 @@
     <div class="lock-card">
       <img src="assets/logo.png" alt="DHauto" class="lock-logo" />
       <h1>Accès DHauto</h1>
-      <p>Entrez votre code pour ouvrir l’outil factures.</p>
+      <p>Entrez le code d’accès pour ouvrir l’outil factures.</p>
       <form id="lock-form">
         <label for="pin-input">Code d’accès</label>
         <input id="pin-input" type="password" inputmode="numeric" autocomplete="current-password" required />
         <p id="lock-error" class="error hidden">Code incorrect.</p>
         <button type="submit" class="btn btn-primary">Entrer</button>
-      </form>
-      <form id="setup-pin-form" class="hidden">
-        <label for="setup-pin">Créez un code (4 à 8 chiffres)</label>
-        <input id="setup-pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" required />
-        <label for="setup-pin-confirm">Confirmez le code</label>
-        <input id="setup-pin-confirm" type="password" inputmode="numeric" pattern="[0-9]{4,8}" required />
-        <p id="setup-error" class="error hidden">Les codes ne correspondent pas.</p>
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
       </form>
     </div>
   </div>
