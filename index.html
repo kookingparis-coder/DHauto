@@ -152,8 +152,12 @@
 
       <section id="tab-history" class="panel" role="tabpanel" hidden>
         <div class="history-toolbar">
-          <h2>Historique des factures</h2>
+          <div>
+            <h2>Historique des factures</h2>
+            <p id="sync-status" class="sync-status">Chargement…</p>
+          </div>
           <div class="history-actions">
+            <button type="button" id="refresh-btn" class="btn btn-ghost">Actualiser</button>
             <button type="button" id="export-btn" class="btn btn-secondary">Exporter sauvegarde</button>
             <label class="btn btn-ghost file-btn">
               Importer
@@ -185,6 +189,7 @@
     </main>
   </div>
 
-  <script src="app.js?v=5"></script>
+  <script src="config.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

@@ -594,6 +594,24 @@ table.lines td {
   letter-spacing: 0.03em;
 }
 
+.sync-status {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.sync-status.ok {
+  color: #1a7f37;
+}
+
+.sync-status.warn {
+  color: #9a6700;
+}
+
+.sync-status.err {
+  color: var(--red);
+}
+
 .history-actions {
   display: flex;
   gap: 8px;

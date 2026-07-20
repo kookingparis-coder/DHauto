@@ -61,6 +61,8 @@ const STORAGE_KEY = "dhauto_invoices_v1";
 const UNLOCK_KEY = "dhauto_unlocked_v1";
 const ACCESS_CODE = "6084";
 
+let invoiceCache = null;
+
 const euro = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "EUR",
@@ -73,7 +75,21 @@ const dateFr = (iso) =>
     year: "numeric",
   });
 
-function loadInvoices() {
+function getCloudConfig() {
+  const c = window.DHAUTO_CONFIG || {};
+  const url = (c.supabaseUrl || "").trim().replace(/\/$/, "");
+  const key = (c.supabaseKey || "").trim();
+  return url && key ? { url, key } : null;
+}
+
+function setSyncStatus(text, kind = "") {
+  const el = document.getElementById("sync-status");
+  if (!el) return;
+  el.textContent = text;
+  el.className = `sync-status ${kind}`.trim();
+}
+
+function loadInvoicesLocal() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   } catch {
@@ -81,8 +97,121 @@ function loadInvoices() {
   }
 }
 
-function saveInvoices(list) {
+function saveInvoicesLocal(list) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  invoiceCache = list;
+}
+
+function loadInvoices() {
+  if (Array.isArray(invoiceCache)) return invoiceCache;
+  return loadInvoicesLocal();
+}
+
+function saveInvoices(list) {
+  saveInvoicesLocal(list);
+}
+
+function cloudHeaders(key, extra = {}) {
+  return {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    "Content-Type": "application/json",
+    ...extra,
+  };
+}
+
+function invoiceToRow(inv) {
+  return {
+    id: inv.id,
+    number: inv.number,
+    created_at: inv.createdAt,
+    invoice_date: inv.date || null,
+    data: inv,
+  };
+}
+
+function rowToInvoice(row) {
+  const data = row.data && typeof row.data === "object" ? row.data : {};
+  return {
+    ...data,
+    id: row.id || data.id,
+    number: row.number || data.number,
+    createdAt: row.created_at || data.createdAt,
+    date: row.invoice_date || data.date,
+  };
+}
+
+async function fetchInvoicesFromCloud() {
+  const cfg = getCloudConfig();
+  if (!cfg) {
+    invoiceCache = loadInvoicesLocal();
+    setSyncStatus(
+      "Mode local : chaque appareil a son propre historique. Configurez le partage cloud pour tout voir ensemble.",
+      "warn"
+    );
+    return invoiceCache;
+  }
+
+  setSyncStatus("Synchronisation en cours…");
+  const res = await fetch(
+    `${cfg.url}/rest/v1/invoices?select=*&order=created_at.desc`,
+    { headers: cloudHeaders(cfg.key) }
+  );
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error("Cloud fetch failed", res.status, detail);
+    invoiceCache = loadInvoicesLocal();
+    setSyncStatus("Erreur cloud — affichage de la copie locale.", "err");
+    return invoiceCache;
+  }
+
+  const rows = await res.json();
+  const list = rows.map(rowToInvoice);
+  saveInvoicesLocal(list);
+  setSyncStatus("Historique partagé en ligne — visible sur tous les appareils.", "ok");
+  return list;
+}
+
+async function upsertInvoiceCloud(inv) {
+  const cfg = getCloudConfig();
+  if (!cfg) return false;
+  const res = await fetch(`${cfg.url}/rest/v1/invoices?on_conflict=id`, {
+    method: "POST",
+    headers: cloudHeaders(cfg.key, { Prefer: "resolution=merge-duplicates,return=minimal" }),
+    body: JSON.stringify(invoiceToRow(inv)),
+  });
+  if (!res.ok) {
+    console.error("Cloud upsert failed", res.status, await res.text());
+    return false;
+  }
+  return true;
+}
+
+async function deleteInvoiceCloud(id) {
+  const cfg = getCloudConfig();
+  if (!cfg) return false;
+  const res = await fetch(`${cfg.url}/rest/v1/invoices?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: cloudHeaders(cfg.key),
+  });
+  if (!res.ok) {
+    console.error("Cloud delete failed", res.status, await res.text());
+    return false;
+  }
+  return true;
+}
+
+async function syncInvoicesToCloud(list) {
+  const cfg = getCloudConfig();
+  if (!cfg || !list.length) return;
+  const res = await fetch(`${cfg.url}/rest/v1/invoices?on_conflict=id`, {
+    method: "POST",
+    headers: cloudHeaders(cfg.key, { Prefer: "resolution=merge-duplicates,return=minimal" }),
+    body: JSON.stringify(list.map(invoiceToRow)),
+  });
+  if (!res.ok) {
+    console.error("Cloud bulk sync failed", res.status, await res.text());
+  }
 }
 
 function nextInvoiceNumber(list = loadInvoices()) {
@@ -90,7 +219,7 @@ function nextInvoiceNumber(list = loadInvoices()) {
   const prefix = `FA-${year}-`;
   const nums = list
     .map((inv) => inv.number)
-    .filter((n) => n.startsWith(prefix))
+    .filter((n) => n && n.startsWith(prefix))
     .map((n) => Number(n.slice(prefix.length)))
     .filter((n) => !Number.isNaN(n));
   const next = (nums.length ? Math.max(...nums) : 0) + 1;
@@ -505,14 +634,22 @@ function renderCalendar() {
   }
 }
 
-function renderHistory() {
+async function renderHistory() {
+  const root = document.getElementById("history-list");
+  if (root) {
+    root.innerHTML = `<div class="empty-history">Chargement de l’historique…</div>`;
+  }
+
+  const all = (await fetchInvoicesFromCloud())
+    .slice()
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   renderCalendar();
 
-  const all = loadInvoices().slice().sort((a, b) => b.createdAt - a.createdAt);
   const list = selectedHistoryDate
     ? all.filter((inv) => inv.date === selectedHistoryDate)
     : all;
-  const root = document.getElementById("history-list");
+
+  if (!root) return;
 
   if (!all.length) {
     root.innerHTML = `<div class="empty-history">Aucune facture enregistrée pour le moment.</div>`;
@@ -561,6 +698,7 @@ function unlockApp() {
   localStorage.setItem(UNLOCK_KEY, "1");
   document.getElementById("lock-screen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
+  fetchInvoicesFromCloud().catch(() => {});
 }
 
 function lockApp() {
@@ -717,9 +855,14 @@ function init() {
     renderHistory();
   });
 
-  document.getElementById("preview-btn").addEventListener("click", () => {
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    renderHistory();
+  });
+
+  document.getElementById("preview-btn").addEventListener("click", async () => {
     const form = document.getElementById("invoice-form");
     if (!form.reportValidity()) return;
+    await fetchInvoicesFromCloud();
     const data = {
       ...readForm(),
       number: window.__currentInvoice?.number || nextInvoiceNumber(),
@@ -727,11 +870,12 @@ function init() {
     showInvoice(data);
   });
 
-  document.getElementById("invoice-form").addEventListener("submit", (e) => {
+  document.getElementById("invoice-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const form = e.target;
     if (!form.reportValidity()) return;
 
+    await fetchInvoicesFromCloud();
     const invoices = loadInvoices();
     const data = {
       id: crypto.randomUUID(),
@@ -741,6 +885,15 @@ function init() {
     };
     invoices.push(data);
     saveInvoices(invoices);
+    const ok = await upsertInvoiceCloud(data);
+    if (getCloudConfig()) {
+      setSyncStatus(
+        ok
+          ? "Facture enregistrée et partagée en ligne."
+          : "Facture sauvée en local, mais l’envoi cloud a échoué.",
+        ok ? "ok" : "err"
+      );
+    }
     showInvoice(data);
     switchTab("create");
   });
@@ -765,7 +918,7 @@ function init() {
     document.getElementById("print-btn").disabled = true;
   });
 
-  document.getElementById("history-list").addEventListener("click", (e) => {
+  document.getElementById("history-list").addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
     const item = btn.closest(".history-item");
@@ -789,7 +942,9 @@ function init() {
 
     if (btn.dataset.action === "delete") {
       if (!confirm(`Supprimer la facture ${inv.number} ?`)) return;
-      saveInvoices(invoices.filter((x) => x.id !== id));
+      const next = invoices.filter((x) => x.id !== id);
+      saveInvoices(next);
+      await deleteInvoiceCloud(id);
       renderHistory();
     }
   });
@@ -817,7 +972,9 @@ function init() {
       data.forEach((inv) => {
         if (inv && inv.id && inv.number) byId.set(inv.id, inv);
       });
-      saveInvoices([...byId.values()]);
+      const merged = [...byId.values()];
+      saveInvoices(merged);
+      await syncInvoicesToCloud(merged);
       renderHistory();
       alert("Import terminé.");
     } catch {
