@@ -331,6 +331,23 @@ button, input, select, textarea {
   margin-top: 4px;
 }
 
+.type1-only.hidden-type,
+.invoice-type-2 .type1-only {
+  display: none !important;
+}
+
+.blank-fill {
+  display: inline-block;
+  min-width: 72px;
+  min-height: 1.15em;
+  border-bottom: 1px solid #888;
+  vertical-align: bottom;
+}
+
+.totals .blank-fill {
+  min-width: 96px;
+}
+
 .totals-live span {
   color: #cfcfcf;
   font-size: 0.85rem;

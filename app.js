@@ -62,6 +62,7 @@ const UNLOCK_KEY = "dhauto_unlocked_v1";
 const ACCESS_CODE = "6084";
 
 let invoiceCache = null;
+let currentInvoiceType = 1;
 
 const euro = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -330,8 +331,13 @@ function formatHours(value) {
   return `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} h`;
 }
 
+function blankCell() {
+  return `<span class="blank-fill">&nbsp;</span>`;
+}
+
 function renderInvoiceHtml(data) {
   const inv = normalizeInvoice(data);
+  const isType2 = Number(inv.invoiceType) === 2;
   const vehicleBits = [
     inv.carBrand,
     inv.carModel,
@@ -344,6 +350,14 @@ function renderInvoiceHtml(data) {
       const detail = line.serviceDetail
         ? `<br><span style="color:#555">${escapeHtml(line.serviceDetail)}</span>`
         : "";
+      if (isType2) {
+        return `
+        <tr>
+          <td>${escapeHtml(line.service)}${detail}</td>
+          <td>${blankCell()}</td>
+          <td>${blankCell()}</td>
+        </tr>`;
+      }
       return `
         <tr>
           <td>${escapeHtml(line.service)}${detail}</td>
@@ -357,6 +371,31 @@ function renderInvoiceHtml(data) {
   const notes = inv.notes
     ? `<p><strong>Observations :</strong> ${escapeHtml(inv.notes)}</p>`
     : "";
+
+  const tableHead = isType2
+    ? `<tr>
+            <th>Désignation</th>
+            <th>Qté</th>
+            <th>Montant HT</th>
+          </tr>`
+    : `<tr>
+            <th>Désignation</th>
+            <th>Qté</th>
+            <th>Heures</th>
+            <th>Montant HT</th>
+          </tr>`;
+
+  const totalsBlock = isType2
+    ? `<div class="totals">
+        <div><span>Total HT</span><span>${blankCell()}</span></div>
+        <div><span>TVA (20 %)</span><span>${blankCell()}</span></div>
+        <div class="grand"><span>Total TTC</span><span>${blankCell()}</span></div>
+      </div>`
+    : `<div class="totals">
+        <div><span>Total HT</span><span>${money(inv.amountHt)}</span></div>
+        <div><span>TVA (20 %)</span><span>${money(inv.tva)}</span></div>
+        <div class="grand"><span>Total TTC</span><span>${money(inv.ttc)}</span></div>
+      </div>`;
 
   return `
     <article class="invoice">
@@ -375,7 +414,7 @@ function renderInvoiceHtml(data) {
           </div>
         </div>
         <div class="invoice-meta">
-          <div class="badge">FACTURE</div>
+          <div class="badge">FACTURE${isType2 ? " TYPE 2" : ""}</div>
           <div>N° <strong>${escapeHtml(inv.number)}</strong></div>
           <div>Date : ${escapeHtml(dateFr(inv.date))}</div>
         </div>
@@ -408,23 +447,14 @@ function renderInvoiceHtml(data) {
 
       <table class="lines">
         <thead>
-          <tr>
-            <th>Désignation</th>
-            <th>Qté</th>
-            <th>Heures</th>
-            <th>Montant HT</th>
-          </tr>
+          ${tableHead}
         </thead>
         <tbody>
           ${rows}
         </tbody>
       </table>
 
-      <div class="totals">
-        <div><span>Total HT</span><span>${money(inv.amountHt)}</span></div>
-        <div><span>TVA (20 %)</span><span>${money(inv.tva)}</span></div>
-        <div class="grand"><span>Total TTC</span><span>${money(inv.ttc)}</span></div>
-      </div>
+      ${totalsBlock}
 
       ${notes}
 
@@ -450,6 +480,20 @@ function createServiceLine(data = {}) {
   ensureServiceDatalist();
   const wrap = document.createElement("div");
   wrap.className = "service-line";
+  const type2 = currentInvoiceType === 2;
+  const amountBlock = type2
+    ? ""
+    : `
+    <div class="row">
+      <div class="field grow">
+        <label>Montant HT (€) *</label>
+        <input class="line-ht" type="number" min="0" step="0.01" required placeholder="0.00" value="${data.amountHt ?? ""}" />
+      </div>
+      <div class="field">
+        <label>Heures travaillées (facultatif)</label>
+        <input class="line-hours" type="number" min="0" step="0.25" placeholder="ex. 1.5" value="${data.hours ?? ""}" />
+      </div>
+    </div>`;
   wrap.innerHTML = `
     <div class="service-line-top">
       <strong>Prestation</strong>
@@ -472,16 +516,7 @@ function createServiceLine(data = {}) {
       <label>Détail (facultatif)</label>
       <input class="line-detail" type="text" placeholder="ex. plaquettes avant + disques" value="${escapeHtml(data.serviceDetail || "")}" />
     </div>
-    <div class="row">
-      <div class="field grow">
-        <label>Montant HT (€) *</label>
-        <input class="line-ht" type="number" min="0" step="0.01" required placeholder="0.00" value="${data.amountHt ?? ""}" />
-      </div>
-      <div class="field">
-        <label>Heures travaillées (facultatif)</label>
-        <input class="line-hours" type="number" min="0" step="0.25" placeholder="ex. 1.5" value="${data.hours ?? ""}" />
-      </div>
-    </div>
+    ${amountBlock}
   `;
   return wrap;
 }
@@ -496,12 +531,15 @@ function renumberLines() {
 }
 
 function updateLiveTotals() {
+  if (currentInvoiceType === 2) return;
   const lines = [...document.querySelectorAll("#service-lines .service-line")];
   let amountHt = 0;
   let tva = 0;
   let ttc = 0;
   lines.forEach((el) => {
-    const totals = calcTotals(el.querySelector(".line-ht").value);
+    const htInput = el.querySelector(".line-ht");
+    if (!htInput) return;
+    const totals = calcTotals(htInput.value);
     amountHt += totals.amountHt;
     tva += totals.tva;
     ttc += totals.ttc;
@@ -515,16 +553,26 @@ function updateLiveTotals() {
 }
 
 function readForm() {
+  const type2 = currentInvoiceType === 2;
   const lines = [...document.querySelectorAll("#service-lines .service-line")].map((el) => {
+    const service = el.querySelector(".line-service").value.trim();
+    const serviceDetail = el.querySelector(".line-detail").value.trim();
+    if (type2) {
+      return {
+        service,
+        serviceDetail,
+        hours: "",
+        amountHt: 0,
+        tva: 0,
+        ttc: 0,
+      };
+    }
     const totals = calcTotals(el.querySelector(".line-ht").value);
     const hoursRaw = el.querySelector(".line-hours").value;
-    const hours =
-      hoursRaw === "" || hoursRaw === null
-        ? ""
-        : Number(hoursRaw);
+    const hours = hoursRaw === "" || hoursRaw === null ? "" : Number(hoursRaw);
     return {
-      service: el.querySelector(".line-service").value.trim(),
-      serviceDetail: el.querySelector(".line-detail").value.trim(),
+      service,
+      serviceDetail,
       hours: hours === "" || Number.isNaN(hours) ? "" : hours,
       ...totals,
     };
@@ -535,6 +583,7 @@ function readForm() {
   const ttc = Math.round(lines.reduce((s, l) => s + l.ttc, 0) * 100) / 100;
 
   return {
+    invoiceType: currentInvoiceType,
     clientName: document.getElementById("client-name").value.trim(),
     clientAddress: document.getElementById("client-address").value.trim(),
     clientZip: document.getElementById("client-zip").value.trim(),
@@ -556,8 +605,44 @@ function readForm() {
   };
 }
 
+function applyInvoiceTypeUI() {
+  const type2 = currentInvoiceType === 2;
+  document.body.classList.toggle("invoice-type-2", type2);
+  const hint = document.getElementById("prestations-hint");
+  if (hint) {
+    hint.textContent = type2
+      ? "Facture type 2 : les cases Qté et Montant HT resteront vides pour remplir à la main."
+      : "Ajoutez autant de lignes que nécessaire (ex. pièces + main d’œuvre).";
+  }
+  document.querySelectorAll(".type1-only").forEach((el) => {
+    el.classList.toggle("hidden-type", type2);
+  });
+}
+
+function setInvoiceType(type, preserveLines = true) {
+  const prevLines = preserveLines
+    ? [...document.querySelectorAll("#service-lines .service-line")].map((el) => ({
+        service: el.querySelector(".line-service")?.value.trim() || "",
+        serviceDetail: el.querySelector(".line-detail")?.value.trim() || "",
+        amountHt: el.querySelector(".line-ht")?.value ?? "",
+        hours: el.querySelector(".line-hours")?.value ?? "",
+      }))
+    : [];
+  currentInvoiceType = Number(type) === 2 ? 2 : 1;
+  applyInvoiceTypeUI();
+  const container = document.getElementById("service-lines");
+  if (!container) return;
+  container.innerHTML = "";
+  const seed = prevLines.length ? prevLines : [{}];
+  seed.forEach((line) => container.appendChild(createServiceLine(line)));
+  renumberLines();
+  updateLiveTotals();
+}
+
 function fillForm(data) {
   const inv = normalizeInvoice(data);
+  currentInvoiceType = Number(inv.invoiceType) === 2 ? 2 : 1;
+  applyInvoiceTypeUI();
   document.getElementById("client-name").value = inv.clientName || "";
   document.getElementById("client-address").value = inv.clientAddress || "";
   document.getElementById("client-zip").value = inv.clientZip || "";
@@ -739,32 +824,43 @@ async function renderHistory() {
   }
 
   root.innerHTML = list
-    .map(
-      (inv) => `
+    .map((inv) => {
+      const norm = normalizeInvoice(inv);
+      const typeLabel = Number(inv.invoiceType) === 2 ? "Type 2" : "Type 1";
+      const amountLabel =
+        Number(inv.invoiceType) === 2 ? "À la main" : money(norm.ttc);
+      return `
       <article class="history-item" data-id="${escapeHtml(inv.id)}">
         <div>
           <h3>${escapeHtml(inv.number)} — ${escapeHtml(inv.clientName)}</h3>
-          <p>${escapeHtml(dateFr(inv.date))} · ${escapeHtml(normalizeInvoice(inv).service)} · ${escapeHtml(inv.carPlate || "")}</p>
+          <p>${escapeHtml(dateFr(inv.date))} · ${escapeHtml(typeLabel)} · ${escapeHtml(norm.service)} · ${escapeHtml(inv.carPlate || "")}</p>
         </div>
-        <div class="amount">${money(normalizeInvoice(inv).ttc)}</div>
+        <div class="amount">${escapeHtml(amountLabel)}</div>
         <div class="item-actions">
           <button type="button" class="btn btn-secondary" data-action="open">Ouvrir</button>
           <button type="button" class="btn btn-primary" data-action="print">Imprimer</button>
           <button type="button" class="btn btn-ghost" data-action="delete">Supprimer</button>
         </div>
-      </article>`
-    )
+      </article>`;
+    })
     .join("");
 }
 
 function switchTab(name) {
+  if (name === "create") setInvoiceType(1);
+  if (name === "create2") setInvoiceType(2);
+
+  const showCreate = name === "create" || name === "create2";
+
   document.querySelectorAll(".tab").forEach((btn) => {
     const active = btn.dataset.tab === name;
     btn.classList.toggle("active", active);
     btn.setAttribute("aria-selected", active ? "true" : "false");
   });
   document.querySelectorAll(".panel").forEach((panel) => {
-    const active = panel.id === `tab-${name}`;
+    const active = showCreate
+      ? panel.id === "tab-create"
+      : panel.id === `tab-${name}`;
     panel.classList.toggle("active", active);
     panel.hidden = !active;
   });
@@ -852,6 +948,7 @@ function initAuth() {
 
 function initServices() {
   ensureServiceDatalist();
+  applyInvoiceTypeUI();
   const container = document.getElementById("service-lines");
   container.innerHTML = "";
   container.appendChild(createServiceLine());
@@ -980,7 +1077,7 @@ function init() {
       alert("Cloud non configuré : la facture reste seulement sur cet appareil.");
     }
     showInvoice(data);
-    switchTab("create");
+    switchTab(currentInvoiceType === 2 ? "create2" : "create");
   });
 
   document.getElementById("print-btn").addEventListener("click", () => {
@@ -1015,13 +1112,13 @@ function init() {
     if (btn.dataset.action === "open") {
       fillForm(inv);
       showInvoice(inv);
-      switchTab("create");
+      switchTab(Number(inv.invoiceType) === 2 ? "create2" : "create");
     }
 
     if (btn.dataset.action === "print") {
       fillForm(inv);
       showInvoice(inv);
-      switchTab("create");
+      switchTab(Number(inv.invoiceType) === 2 ? "create2" : "create");
       setTimeout(() => window.print(), 50);
     }
 
