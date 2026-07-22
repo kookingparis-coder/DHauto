@@ -294,6 +294,7 @@ function normalizeInvoice(data) {
       {
         service: data.service || "Prestation",
         serviceDetail: data.serviceDetail || "",
+        hours: data.hours ?? "",
         ...totals,
       },
     ];
@@ -303,6 +304,7 @@ function normalizeInvoice(data) {
       return {
         service: line.service || "Prestation",
         serviceDetail: line.serviceDetail || "",
+        hours: line.hours ?? "",
         ...totals,
       };
     });
@@ -314,6 +316,13 @@ function normalizeInvoice(data) {
   const service = lines.map((l) => l.service).join(" · ");
 
   return { ...data, lines, amountHt, tva, ttc, service };
+}
+
+function formatHours(value) {
+  if (value === "" || value === null || value === undefined) return "—";
+  const n = Number(value);
+  if (Number.isNaN(n) || n < 0) return "—";
+  return `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} h`;
 }
 
 function renderInvoiceHtml(data) {
@@ -334,6 +343,7 @@ function renderInvoiceHtml(data) {
         <tr>
           <td>${escapeHtml(line.service)}${detail}</td>
           <td>1</td>
+          <td>${escapeHtml(formatHours(line.hours))}</td>
           <td>${money(line.amountHt)}</td>
         </tr>`;
     })
@@ -396,6 +406,7 @@ function renderInvoiceHtml(data) {
           <tr>
             <th>Désignation</th>
             <th>Qté</th>
+            <th>Heures</th>
             <th>Montant HT</th>
           </tr>
         </thead>
@@ -445,9 +456,15 @@ function createServiceLine(data = {}) {
       <label>Détail (facultatif)</label>
       <input class="line-detail" type="text" placeholder="ex. plaquettes avant + disques" value="${escapeHtml(data.serviceDetail || "")}" />
     </div>
-    <div class="field">
-      <label>Montant HT (€) *</label>
-      <input class="line-ht" type="number" min="0" step="0.01" required placeholder="0.00" value="${data.amountHt ?? ""}" />
+    <div class="row">
+      <div class="field grow">
+        <label>Montant HT (€) *</label>
+        <input class="line-ht" type="number" min="0" step="0.01" required placeholder="0.00" value="${data.amountHt ?? ""}" />
+      </div>
+      <div class="field">
+        <label>Heures travaillées (facultatif)</label>
+        <input class="line-hours" type="number" min="0" step="0.25" placeholder="ex. 1.5" value="${data.hours ?? ""}" />
+      </div>
     </div>
   `;
   return wrap;
@@ -484,9 +501,15 @@ function updateLiveTotals() {
 function readForm() {
   const lines = [...document.querySelectorAll("#service-lines .service-line")].map((el) => {
     const totals = calcTotals(el.querySelector(".line-ht").value);
+    const hoursRaw = el.querySelector(".line-hours").value;
+    const hours =
+      hoursRaw === "" || hoursRaw === null
+        ? ""
+        : Number(hoursRaw);
     return {
       service: el.querySelector(".line-service").value,
       serviceDetail: el.querySelector(".line-detail").value.trim(),
+      hours: hours === "" || Number.isNaN(hours) ? "" : hours,
       ...totals,
     };
   });
