@@ -446,6 +446,7 @@ button, input, select, textarea {
   gap: 16px;
   padding-bottom: 14px;
   border-bottom: 1px solid #222;
+  border-bottom-color: #b91c1c;
 }
 
 .invoice-logo {
@@ -466,7 +467,7 @@ button, input, select, textarea {
 }
 
 .invoice-garage h1 span {
-  color: #111;
+  color: #b91c1c;
 }
 
 .invoice-garage p {
@@ -486,17 +487,17 @@ button, input, select, textarea {
   display: inline-block;
   background: transparent;
   color: #111;
-  padding: 0;
+  padding: 0 0 3px;
   border-radius: 0;
   font-family: var(--display);
   letter-spacing: 0.06em;
   margin-bottom: 8px;
   font-size: 1.1rem;
-  border-bottom: 1px solid #111;
+  border-bottom: 1px solid #b91c1c;
 }
 
 .invoice-meta strong {
-  color: #111;
+  color: #b91c1c;
   font-weight: 700;
 }
 
@@ -510,7 +511,7 @@ button, input, select, textarea {
 .party {
   background: transparent;
   border: 1px solid #ddd;
-  border-left: 1px solid #ddd;
+  border-left: 2px solid #b91c1c;
   padding: 12px 14px;
   border-radius: 0;
 }
@@ -601,7 +602,7 @@ table.lines td {
 }
 
 .totals .grand span:last-child {
-  color: #111;
+  color: #b91c1c;
 }
 
 .legal {
