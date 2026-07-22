@@ -325,7 +325,7 @@ function normalizeInvoice(data) {
 }
 
 function blankCell() {
-  return `<span class="blank-fill">&nbsp;</span>`;
+  return "";
 }
 
 function renderInvoiceHtml(data) {
