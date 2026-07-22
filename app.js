@@ -344,34 +344,40 @@ function formatQty(value) {
   return String(n).replace(".", ",");
 }
 
-function lineMontantHt(line) {
-  const manual = parseOptionalNumber(line.montantHt);
-  if (manual !== "") return manual;
+function lineUnitMontant(line) {
+  return parseOptionalNumber(line.montantHt);
+}
+
+function lineTarifHt(line) {
+  const manualTarif = parseOptionalNumber(line.amountHt);
   const qty = parseOptionalNumber(line.qty);
-  const tarif = parseOptionalNumber(line.amountHt);
-  if (qty !== "" && tarif !== "") {
-    return Math.round(qty * tarif * 100) / 100;
+  const montant = parseOptionalNumber(line.montantHt);
+  // Tarif HT = Montant HT × quantité (si les 2 sont là)
+  if (qty !== "" && montant !== "") {
+    return Math.round(qty * montant * 100) / 100;
   }
+  // Sinon tarif saisi à la main
+  if (manualTarif !== "") return manualTarif;
   return null;
 }
 
 function lineTotalForSum(line) {
-  const montant = lineMontantHt(line);
-  if (montant !== null) return montant;
-  return Number(line.amountHt) || 0;
+  const tarif = lineTarifHt(line);
+  if (tarif !== null) return tarif;
+  const montant = lineUnitMontant(line);
+  return montant === "" ? 0 : montant;
 }
 
 function updateLiveTotals() {
   const lines = [...document.querySelectorAll("#service-lines .service-line")];
   let amountHt = 0;
   lines.forEach((el) => {
-    const tarif = parseOptionalNumber(el.querySelector(".line-ht")?.value);
     const qty = parseOptionalNumber(el.querySelector(".line-qty")?.value);
-    const manual = parseOptionalNumber(el.querySelector(".line-montant")?.value);
-    if (manual !== "") amountHt += manual;
-    else if (qty !== "" && tarif !== "") amountHt += Math.round(qty * tarif * 100) / 100;
-    else if (tarif !== "") amountHt += tarif;
-    else if (qty === "" && tarif === "" && manual === "") amountHt += 0;
+    const montant = parseOptionalNumber(el.querySelector(".line-montant")?.value);
+    const tarifManual = parseOptionalNumber(el.querySelector(".line-ht")?.value);
+    if (qty !== "" && montant !== "") amountHt += Math.round(qty * montant * 100) / 100;
+    else if (tarifManual !== "") amountHt += tarifManual;
+    else if (montant !== "") amountHt += montant;
   });
   amountHt = Math.round(amountHt * 100) / 100;
   const tva = Math.round(amountHt * GARAGE.tvaRate * 100) / 100;
@@ -399,15 +405,14 @@ function renderInvoiceHtml(data) {
       const detail = line.serviceDetail
         ? `<br><span style="color:#555">${escapeHtml(line.serviceDetail)}</span>`
         : "";
-      const montant = lineMontantHt(line);
-      const tarif = parseOptionalNumber(line.amountHt);
-      const tarifCell = tarif === "" ? blankCell() : money(tarif);
+      const unitMontant = lineUnitMontant(line);
+      const tarif = lineTarifHt(line);
       return `
         <tr>
           <td>${escapeHtml(line.service)}${detail}</td>
           <td>${formatQty(line.qty)}</td>
-          <td>${montant === null ? blankCell() : money(montant)}</td>
-          <td>${tarifCell}</td>
+          <td>${unitMontant === "" ? blankCell() : money(unitMontant)}</td>
+          <td>${tarif === null ? blankCell() : money(tarif)}</td>
         </tr>`;
     })
     .join("");
@@ -423,9 +428,7 @@ function renderInvoiceHtml(data) {
             <th>Tarif HT</th>
           </tr>`;
 
-  const hasAnyAmount = inv.lines.some(
-    (l) => lineMontantHt(l) !== null || parseOptionalNumber(l.amountHt) !== ""
-  );
+  const hasAnyAmount = inv.lines.some((l) => lineTarifHt(l) !== null || lineUnitMontant(l) !== "");
   const summedHt = Math.round(
     inv.lines.reduce((s, l) => s + lineTotalForSum(l), 0) * 100
   ) / 100;
@@ -534,12 +537,12 @@ function createServiceLine(data = {}) {
         <input class="line-qty" type="number" min="0" step="0.01" placeholder="ex. 2" value="${data.qty ?? ""}" />
       </div>
       <div class="field">
-        <label>Tarif HT (€) (facultatif)</label>
-        <input class="line-ht" type="number" min="0" step="0.01" placeholder="ex. 40" value="${data.amountHt ?? ""}" />
+        <label>Montant HT (€) (facultatif)</label>
+        <input class="line-montant" type="number" min="0" step="0.01" placeholder="ex. 40" value="${data.montantHt ?? ""}" />
       </div>
       <div class="field grow">
-        <label>Montant HT (€) (facultatif)</label>
-        <input class="line-montant" type="number" min="0" step="0.01" placeholder="auto si qté × tarif" value="${data.montantHt ?? ""}" />
+        <label>Tarif HT (€) (facultatif)</label>
+        <input class="line-ht" type="number" min="0" step="0.01" placeholder="auto = montant × qté" value="${data.amountHt ?? ""}" />
       </div>
     </div>`;
   wrap.innerHTML = `
@@ -579,26 +582,17 @@ function renumberLines() {
 }
 
 function readForm() {
-  const type2 = currentInvoiceType === 2;
   const lines = [...document.querySelectorAll("#service-lines .service-line")].map((el) => {
     const service = el.querySelector(".line-service").value.trim();
     const serviceDetail = el.querySelector(".line-detail").value.trim();
     const qty = parseOptionalNumber(el.querySelector(".line-qty")?.value);
     const montantHt = parseOptionalNumber(el.querySelector(".line-montant")?.value);
-    const htInput = el.querySelector(".line-ht");
-    const totals = calcTotals(htInput ? htInput.value : 0);
-    if (type2 && !(Number(htInput?.value) > 0) && montantHt === "") {
-      return {
-        service,
-        serviceDetail,
-        qty,
-        montantHt: "",
-        hours: "",
-        amountHt: 0,
-        tva: 0,
-        ttc: 0,
-      };
+    let tarif = parseOptionalNumber(el.querySelector(".line-ht")?.value);
+    // Tarif HT = Montant HT × quantité
+    if ((tarif === "" || tarif === null) && qty !== "" && montantHt !== "") {
+      tarif = Math.round(qty * montantHt * 100) / 100;
     }
+    const totals = calcTotals(tarif === "" ? 0 : tarif);
     return {
       service,
       serviceDetail,
@@ -642,7 +636,7 @@ function applyInvoiceTypeUI() {
   const hint = document.getElementById("prestations-hint");
   if (hint) {
     hint.textContent =
-      "Tout est facultatif. Astuce : Montant HT = Tarif HT × quantité (calculé auto si les 2 sont remplis).";
+      "Tout est facultatif. Tarif HT = Montant HT × quantité (calculé auto si montant + qté sont remplis).";
   }
   document.querySelectorAll(".type1-only").forEach((el) => {
     el.classList.toggle("hidden-type", type2);
