@@ -435,8 +435,9 @@ button, input, select, textarea {
 }
 
 .invoice {
-  padding: 22px 24px 18px;
-  color: var(--ink);
+  padding: 28px 30px 22px;
+  color: #222;
+  background: #fff;
 }
 
 .invoice-top {
@@ -444,12 +445,12 @@ button, input, select, textarea {
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 14px;
-  border-bottom: 3px solid var(--red);
+  border-bottom: 1px solid #222;
 }
 
 .invoice-logo {
-  width: 88px;
-  height: 88px;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
   border-radius: 50%;
   background: #000;
@@ -458,93 +459,109 @@ button, input, select, textarea {
 .invoice-garage h1 {
   margin: 0;
   font-family: var(--display);
-  font-size: 1.7rem;
-  letter-spacing: 0.04em;
+  font-size: 1.45rem;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+  color: #111;
 }
 
 .invoice-garage h1 span {
-  color: var(--red);
+  color: #111;
 }
 
 .invoice-garage p {
-  margin: 4px 0 0;
-  font-size: 0.86rem;
-  color: var(--muted);
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  color: #555;
   line-height: 1.45;
 }
 
 .invoice-meta {
   text-align: right;
+  font-size: 0.92rem;
+  color: #333;
 }
 
 .invoice-meta .badge {
   display: inline-block;
-  background: var(--black);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
+  background: transparent;
+  color: #111;
+  padding: 0;
+  border-radius: 0;
   font-family: var(--display);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   margin-bottom: 8px;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #111;
 }
 
 .invoice-meta strong {
-  color: var(--red);
+  color: #111;
+  font-weight: 700;
 }
 
 .invoice-parties {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 18px;
   margin: 18px 0 14px;
 }
 
 .party {
-  background: #f7f7f7;
-  border-left: 3px solid var(--red);
+  background: transparent;
+  border: 1px solid #ddd;
+  border-left: 1px solid #ddd;
   padding: 12px 14px;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0;
 }
 
 .party h2 {
   margin: 0 0 8px;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
+  color: #666;
+  font-weight: 600;
 }
 
 .party p {
   margin: 0;
   line-height: 1.45;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+  color: #222;
 }
 
 .vehicle-box {
   margin-bottom: 14px;
-  padding: 10px 12px;
-  border: 1px dashed #bbb;
-  border-radius: 8px;
-  font-size: 0.92rem;
+  padding: 8px 0;
+  border: 0;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  border-radius: 0;
+  font-size: 0.9rem;
+  color: #333;
 }
 
 .vehicle-box strong {
-  color: var(--red);
+  color: #111;
+  font-weight: 600;
 }
 
 table.lines {
   width: 100%;
   border-collapse: collapse;
-  margin: 8px 0 14px;
-  font-size: 0.92rem;
+  margin: 10px 0 16px;
+  font-size: 0.9rem;
 }
 
 table.lines th {
-  background: var(--black);
-  color: #fff;
+  background: #fff;
+  color: #111;
   text-align: left;
-  padding: 10px 8px;
+  padding: 8px 6px;
   font-weight: 600;
+  border-bottom: 1px solid #222;
+  border-top: 1px solid #222;
 }
 
 table.lines th:not(:first-child),
@@ -554,41 +571,44 @@ table.lines td:not(:first-child) {
 }
 
 table.lines td {
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--line);
+  padding: 9px 6px;
+  border-bottom: 1px solid #e8e8e8;
   vertical-align: top;
+  color: #222;
 }
 
 .totals {
-  width: min(280px, 100%);
+  width: min(260px, 100%);
   margin-left: auto;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .totals div {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
-  font-size: 0.95rem;
+  padding: 5px 0;
+  font-size: 0.9rem;
+  color: #333;
 }
 
 .totals .grand {
   margin-top: 6px;
-  padding-top: 10px;
-  border-top: 2px solid var(--black);
-  font-size: 1.1rem;
+  padding-top: 8px;
+  border-top: 1px solid #222;
+  font-size: 1rem;
   font-weight: 700;
+  color: #111;
 }
 
 .totals .grand span:last-child {
-  color: var(--red);
+  color: #111;
 }
 
 .legal {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #ddd;
   padding-top: 12px;
-  font-size: 0.75rem;
-  color: #555;
+  font-size: 0.72rem;
+  color: #666;
   line-height: 1.45;
 }
 

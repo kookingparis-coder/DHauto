@@ -414,7 +414,7 @@ function renderInvoiceHtml(data) {
           </div>
         </div>
         <div class="invoice-meta">
-          <div class="badge">FACTURE${isType2 ? " TYPE 2" : ""}</div>
+          <div class="badge">FACTURE${isType2 ? " — TYPE 2" : ""}</div>
           <div>N° <strong>${escapeHtml(inv.number)}</strong></div>
           <div>Date : ${escapeHtml(dateFr(inv.date))}</div>
         </div>
