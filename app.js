@@ -324,13 +324,6 @@ function normalizeInvoice(data) {
   return { ...data, lines, amountHt, tva, ttc, service };
 }
 
-function formatHours(value) {
-  if (value === "" || value === null || value === undefined) return "—";
-  const n = Number(value);
-  if (Number.isNaN(n) || n < 0) return "—";
-  return `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} h`;
-}
-
 function blankCell() {
   return `<span class="blank-fill">&nbsp;</span>`;
 }
@@ -350,20 +343,13 @@ function renderInvoiceHtml(data) {
       const detail = line.serviceDetail
         ? `<br><span style="color:#555">${escapeHtml(line.serviceDetail)}</span>`
         : "";
-      if (isType2) {
-        return `
-        <tr>
-          <td>${escapeHtml(line.service)}${detail}</td>
-          <td>${blankCell()}</td>
-          <td>${blankCell()}</td>
-        </tr>`;
-      }
+      const tarifCell = isType2 ? blankCell() : money(line.amountHt);
       return `
         <tr>
           <td>${escapeHtml(line.service)}${detail}</td>
-          <td>1</td>
-          <td>${escapeHtml(formatHours(line.hours))}</td>
-          <td>${money(line.amountHt)}</td>
+          <td>${blankCell()}</td>
+          <td>${blankCell()}</td>
+          <td>${tarifCell}</td>
         </tr>`;
     })
     .join("");
@@ -372,17 +358,11 @@ function renderInvoiceHtml(data) {
     ? `<p><strong>Observations :</strong> ${escapeHtml(inv.notes)}</p>`
     : "";
 
-  const tableHead = isType2
-    ? `<tr>
+  const tableHead = `<tr>
             <th>Désignation</th>
             <th>Qté</th>
             <th>Montant HT</th>
-          </tr>`
-    : `<tr>
-            <th>Désignation</th>
-            <th>Qté</th>
-            <th>Heures</th>
-            <th>Montant HT</th>
+            <th>Tarif HT</th>
           </tr>`;
 
   const totalsBlock = isType2
@@ -484,15 +464,9 @@ function createServiceLine(data = {}) {
   const amountBlock = type2
     ? ""
     : `
-    <div class="row">
-      <div class="field grow">
-        <label>Montant HT (€) *</label>
-        <input class="line-ht" type="number" min="0" step="0.01" required placeholder="0.00" value="${data.amountHt ?? ""}" />
-      </div>
-      <div class="field">
-        <label>Heures travaillées (facultatif)</label>
-        <input class="line-hours" type="number" min="0" step="0.25" placeholder="ex. 1.5" value="${data.hours ?? ""}" />
-      </div>
+    <div class="field">
+      <label>Tarif HT (€) *</label>
+      <input class="line-ht" type="number" min="0" step="0.01" required placeholder="0.00" value="${data.amountHt ?? ""}" />
     </div>`;
   wrap.innerHTML = `
     <div class="service-line-top">
@@ -568,12 +542,10 @@ function readForm() {
       };
     }
     const totals = calcTotals(el.querySelector(".line-ht").value);
-    const hoursRaw = el.querySelector(".line-hours").value;
-    const hours = hoursRaw === "" || hoursRaw === null ? "" : Number(hoursRaw);
     return {
       service,
       serviceDetail,
-      hours: hours === "" || Number.isNaN(hours) ? "" : hours,
+      hours: "",
       ...totals,
     };
   });
@@ -611,7 +583,7 @@ function applyInvoiceTypeUI() {
   const hint = document.getElementById("prestations-hint");
   if (hint) {
     hint.textContent = type2
-      ? "Facture type 2 : les cases Qté et Montant HT resteront vides pour remplir à la main."
+      ? "Facture type 2 : les cases Qté, Montant HT et Tarif HT resteront vides pour remplir à la main."
       : "Ajoutez autant de lignes que nécessaire (ex. pièces + main d’œuvre).";
   }
   document.querySelectorAll(".type1-only").forEach((el) => {
@@ -625,7 +597,7 @@ function setInvoiceType(type, preserveLines = true) {
         service: el.querySelector(".line-service")?.value.trim() || "",
         serviceDetail: el.querySelector(".line-detail")?.value.trim() || "",
         amountHt: el.querySelector(".line-ht")?.value ?? "",
-        hours: el.querySelector(".line-hours")?.value ?? "",
+        hours: "",
       }))
     : [];
   currentInvoiceType = Number(type) === 2 ? 2 : 1;
@@ -655,7 +627,9 @@ function fillForm(data) {
   document.getElementById("car-km").value = inv.carKm || "";
   document.getElementById("notes").value = inv.notes || "";
   document.getElementById("payment-method").value =
-    inv.paymentMethod === "Virement" || inv.paymentMethod === "Espèces"
+    inv.paymentMethod === "Virement" ||
+    inv.paymentMethod === "Espèces" ||
+    inv.paymentMethod === "Chèque"
       ? inv.paymentMethod
       : "Espèces";
   document.getElementById("invoice-date").value = inv.date || todayIso();
