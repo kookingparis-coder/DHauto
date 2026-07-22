@@ -348,15 +348,40 @@ function lineMontantHt(line) {
   const manual = parseOptionalNumber(line.montantHt);
   if (manual !== "") return manual;
   const qty = parseOptionalNumber(line.qty);
-  if (qty === "") return null;
-  const tarif = Number(line.amountHt) || 0;
-  return Math.round(qty * tarif * 100) / 100;
+  const tarif = parseOptionalNumber(line.amountHt);
+  if (qty !== "" && tarif !== "") {
+    return Math.round(qty * tarif * 100) / 100;
+  }
+  return null;
 }
 
 function lineTotalForSum(line) {
   const montant = lineMontantHt(line);
   if (montant !== null) return montant;
   return Number(line.amountHt) || 0;
+}
+
+function updateLiveTotals() {
+  const lines = [...document.querySelectorAll("#service-lines .service-line")];
+  let amountHt = 0;
+  lines.forEach((el) => {
+    const tarif = parseOptionalNumber(el.querySelector(".line-ht")?.value);
+    const qty = parseOptionalNumber(el.querySelector(".line-qty")?.value);
+    const manual = parseOptionalNumber(el.querySelector(".line-montant")?.value);
+    if (manual !== "") amountHt += manual;
+    else if (qty !== "" && tarif !== "") amountHt += Math.round(qty * tarif * 100) / 100;
+    else if (tarif !== "") amountHt += tarif;
+    else if (qty === "" && tarif === "" && manual === "") amountHt += 0;
+  });
+  amountHt = Math.round(amountHt * 100) / 100;
+  const tva = Math.round(amountHt * GARAGE.tvaRate * 100) / 100;
+  const ttc = Math.round((amountHt + tva) * 100) / 100;
+  const liveHt = document.getElementById("live-ht");
+  const liveTva = document.getElementById("live-tva");
+  const liveTtc = document.getElementById("live-ttc");
+  if (liveHt) liveHt.textContent = money(amountHt);
+  if (liveTva) liveTva.textContent = money(tva);
+  if (liveTtc) liveTtc.textContent = money(ttc);
 }
 
 function renderInvoiceHtml(data) {
@@ -375,10 +400,8 @@ function renderInvoiceHtml(data) {
         ? `<br><span style="color:#555">${escapeHtml(line.serviceDetail)}</span>`
         : "";
       const montant = lineMontantHt(line);
-      const tarifCell =
-        isType2 && !(Number(line.amountHt) > 0)
-          ? blankCell()
-          : money(line.amountHt);
+      const tarif = parseOptionalNumber(line.amountHt);
+      const tarifCell = tarif === "" ? blankCell() : money(tarif);
       return `
         <tr>
           <td>${escapeHtml(line.service)}${detail}</td>
@@ -400,13 +423,16 @@ function renderInvoiceHtml(data) {
             <th>Tarif HT</th>
           </tr>`;
 
+  const hasAnyAmount = inv.lines.some(
+    (l) => lineMontantHt(l) !== null || parseOptionalNumber(l.amountHt) !== ""
+  );
   const summedHt = Math.round(
     inv.lines.reduce((s, l) => s + lineTotalForSum(l), 0) * 100
   ) / 100;
   const summedTva = Math.round(summedHt * GARAGE.tvaRate * 100) / 100;
   const summedTtc = Math.round((summedHt + summedTva) * 100) / 100;
 
-  const totalsBlock = isType2 && !inv.lines.some((l) => Number(l.amountHt) > 0)
+  const totalsBlock = !hasAnyAmount
     ? `<div class="totals">
         <div><span>Total HT</span><span>${blankCell()}</span></div>
         <div><span>TVA (20 %)</span><span>${blankCell()}</span></div>
@@ -501,7 +527,6 @@ function createServiceLine(data = {}) {
   ensureServiceDatalist();
   const wrap = document.createElement("div");
   wrap.className = "service-line";
-  const type2 = currentInvoiceType === 2;
   const amountBlock = `
     <div class="row">
       <div class="field">
@@ -509,12 +534,12 @@ function createServiceLine(data = {}) {
         <input class="line-qty" type="number" min="0" step="0.01" placeholder="ex. 2" value="${data.qty ?? ""}" />
       </div>
       <div class="field">
-        <label>Montant HT (€) (facultatif)</label>
-        <input class="line-montant" type="number" min="0" step="0.01" placeholder="ex. 80" value="${data.montantHt ?? ""}" />
+        <label>Tarif HT (€) (facultatif)</label>
+        <input class="line-ht" type="number" min="0" step="0.01" placeholder="ex. 40" value="${data.amountHt ?? ""}" />
       </div>
       <div class="field grow">
-        <label>Tarif HT (€) ${type2 ? "(facultatif)" : "*"}</label>
-        <input class="line-ht" type="number" min="0" step="0.01" ${type2 ? "" : "required"} placeholder="0.00" value="${data.amountHt ?? ""}" />
+        <label>Montant HT (€) (facultatif)</label>
+        <input class="line-montant" type="number" min="0" step="0.01" placeholder="auto si qté × tarif" value="${data.montantHt ?? ""}" />
       </div>
     </div>`;
   wrap.innerHTML = `
@@ -551,29 +576,6 @@ function renumberLines() {
     removeBtn.style.display =
       document.querySelectorAll("#service-lines .service-line").length > 1 ? "" : "none";
   });
-}
-
-function updateLiveTotals() {
-  const lines = [...document.querySelectorAll("#service-lines .service-line")];
-  let amountHt = 0;
-  lines.forEach((el) => {
-    const htInput = el.querySelector(".line-ht");
-    const tarif = Number(htInput?.value) || 0;
-    const qty = parseOptionalNumber(el.querySelector(".line-qty")?.value);
-    const manual = parseOptionalNumber(el.querySelector(".line-montant")?.value);
-    if (manual !== "") amountHt += manual;
-    else if (qty !== "") amountHt += Math.round(qty * tarif * 100) / 100;
-    else amountHt += tarif;
-  });
-  amountHt = Math.round(amountHt * 100) / 100;
-  const tva = Math.round(amountHt * GARAGE.tvaRate * 100) / 100;
-  const ttc = Math.round((amountHt + tva) * 100) / 100;
-  const liveHt = document.getElementById("live-ht");
-  const liveTva = document.getElementById("live-tva");
-  const liveTtc = document.getElementById("live-ttc");
-  if (liveHt) liveHt.textContent = money(amountHt);
-  if (liveTva) liveTva.textContent = money(tva);
-  if (liveTtc) liveTtc.textContent = money(ttc);
 }
 
 function readForm() {
@@ -639,9 +641,8 @@ function applyInvoiceTypeUI() {
   document.body.classList.toggle("invoice-type-2", type2);
   const hint = document.getElementById("prestations-hint");
   if (hint) {
-    hint.textContent = type2
-      ? "Facture type 2 : quantité, montant HT et tarif facultatifs."
-      : "Quantité et Montant HT facultatifs. Si montant vide et quantité remplie : montant = qté × tarif.";
+    hint.textContent =
+      "Tout est facultatif. Astuce : Montant HT = Tarif HT × quantité (calculé auto si les 2 sont remplis).";
   }
   document.querySelectorAll(".type1-only").forEach((el) => {
     el.classList.toggle("hidden-type", type2);
