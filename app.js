@@ -302,6 +302,7 @@ function normalizeInvoice(data) {
         serviceDetail: data.serviceDetail || "",
         hours: data.hours ?? "",
         qty: data.qty ?? "",
+        montantHt: data.montantHt ?? "",
         ...totals,
       },
     ];
@@ -313,6 +314,7 @@ function normalizeInvoice(data) {
         serviceDetail: line.serviceDetail || "",
         hours: line.hours ?? "",
         qty: line.qty ?? "",
+        montantHt: line.montantHt ?? "",
         ...totals,
       };
     });
@@ -343,6 +345,8 @@ function formatQty(value) {
 }
 
 function lineMontantHt(line) {
+  const manual = parseOptionalNumber(line.montantHt);
+  if (manual !== "") return manual;
   const qty = parseOptionalNumber(line.qty);
   if (qty === "") return null;
   const tarif = Number(line.amountHt) || 0;
@@ -504,6 +508,10 @@ function createServiceLine(data = {}) {
         <label>Quantité (facultatif)</label>
         <input class="line-qty" type="number" min="0" step="0.01" placeholder="ex. 2" value="${data.qty ?? ""}" />
       </div>
+      <div class="field">
+        <label>Montant HT (€) (facultatif)</label>
+        <input class="line-montant" type="number" min="0" step="0.01" placeholder="ex. 80" value="${data.montantHt ?? ""}" />
+      </div>
       <div class="field grow">
         <label>Tarif HT (€) ${type2 ? "(facultatif)" : "*"}</label>
         <input class="line-ht" type="number" min="0" step="0.01" ${type2 ? "" : "required"} placeholder="0.00" value="${data.amountHt ?? ""}" />
@@ -546,18 +554,16 @@ function renumberLines() {
 }
 
 function updateLiveTotals() {
-  if (currentInvoiceType === 2) {
-    // still update if tarifs filled
-  }
   const lines = [...document.querySelectorAll("#service-lines .service-line")];
   let amountHt = 0;
   lines.forEach((el) => {
     const htInput = el.querySelector(".line-ht");
-    if (!htInput) return;
-    const tarif = Number(htInput.value) || 0;
-    const qtyRaw = el.querySelector(".line-qty")?.value;
-    const qty = parseOptionalNumber(qtyRaw);
-    amountHt += qty === "" ? tarif : Math.round(qty * tarif * 100) / 100;
+    const tarif = Number(htInput?.value) || 0;
+    const qty = parseOptionalNumber(el.querySelector(".line-qty")?.value);
+    const manual = parseOptionalNumber(el.querySelector(".line-montant")?.value);
+    if (manual !== "") amountHt += manual;
+    else if (qty !== "") amountHt += Math.round(qty * tarif * 100) / 100;
+    else amountHt += tarif;
   });
   amountHt = Math.round(amountHt * 100) / 100;
   const tva = Math.round(amountHt * GARAGE.tvaRate * 100) / 100;
@@ -576,13 +582,15 @@ function readForm() {
     const service = el.querySelector(".line-service").value.trim();
     const serviceDetail = el.querySelector(".line-detail").value.trim();
     const qty = parseOptionalNumber(el.querySelector(".line-qty")?.value);
+    const montantHt = parseOptionalNumber(el.querySelector(".line-montant")?.value);
     const htInput = el.querySelector(".line-ht");
     const totals = calcTotals(htInput ? htInput.value : 0);
-    if (type2 && !(Number(htInput?.value) > 0)) {
+    if (type2 && !(Number(htInput?.value) > 0) && montantHt === "") {
       return {
         service,
         serviceDetail,
         qty,
+        montantHt: "",
         hours: "",
         amountHt: 0,
         tva: 0,
@@ -593,6 +601,7 @@ function readForm() {
       service,
       serviceDetail,
       qty,
+      montantHt,
       hours: "",
       ...totals,
     };
@@ -631,8 +640,8 @@ function applyInvoiceTypeUI() {
   const hint = document.getElementById("prestations-hint");
   if (hint) {
     hint.textContent = type2
-      ? "Facture type 2 : quantité et tarif facultatifs ; cases vides si non renseignés."
-      : "Quantité facultative : si remplie, le Montant HT = quantité × tarif.";
+      ? "Facture type 2 : quantité, montant HT et tarif facultatifs."
+      : "Quantité et Montant HT facultatifs. Si montant vide et quantité remplie : montant = qté × tarif.";
   }
   document.querySelectorAll(".type1-only").forEach((el) => {
     el.classList.toggle("hidden-type", type2);
@@ -646,6 +655,7 @@ function setInvoiceType(type, preserveLines = true) {
         serviceDetail: el.querySelector(".line-detail")?.value.trim() || "",
         amountHt: el.querySelector(".line-ht")?.value ?? "",
         qty: el.querySelector(".line-qty")?.value ?? "",
+        montantHt: el.querySelector(".line-montant")?.value ?? "",
         hours: "",
       }))
     : [];
@@ -994,7 +1004,7 @@ function init() {
   });
 
   document.getElementById("service-lines").addEventListener("input", (e) => {
-    if (e.target.matches(".line-ht, .line-qty")) updateLiveTotals();
+    if (e.target.matches(".line-ht, .line-qty, .line-montant")) updateLiveTotals();
   });
 
   document.getElementById("service-lines").addEventListener("click", (e) => {
