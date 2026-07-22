@@ -278,10 +278,15 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
-function serviceOptionsHtml(selected = "") {
-  return SERVICES.map(
-    (s) =>
-      `<option value="${escapeHtml(s)}" ${s === selected ? "selected" : ""}>${escapeHtml(s)}</option>`
+function ensureServiceDatalist() {
+  let list = document.getElementById("service-suggestions");
+  if (!list) {
+    list = document.createElement("datalist");
+    list.id = "service-suggestions";
+    document.body.appendChild(list);
+  }
+  list.innerHTML = SERVICES.map(
+    (s) => `<option value="${escapeHtml(s)}"></option>`
   ).join("");
 }
 
@@ -441,6 +446,7 @@ function renderInvoiceHtml(data) {
 }
 
 function createServiceLine(data = {}) {
+  ensureServiceDatalist();
   const wrap = document.createElement("div");
   wrap.className = "service-line";
   wrap.innerHTML = `
@@ -450,7 +456,16 @@ function createServiceLine(data = {}) {
     </div>
     <div class="field">
       <label>Type de prestation *</label>
-      <select class="line-service" required>${serviceOptionsHtml(data.service || SERVICES[0])}</select>
+      <input
+        class="line-service"
+        type="text"
+        list="service-suggestions"
+        required
+        placeholder="Choisir dans la liste ou écrire"
+        value="${escapeHtml(data.service || "")}"
+        autocomplete="off"
+      />
+      <span class="field-hint">Liste déroulante ou saisie libre.</span>
     </div>
     <div class="field">
       <label>Détail (facultatif)</label>
@@ -507,7 +522,7 @@ function readForm() {
         ? ""
         : Number(hoursRaw);
     return {
-      service: el.querySelector(".line-service").value,
+      service: el.querySelector(".line-service").value.trim(),
       serviceDetail: el.querySelector(".line-detail").value.trim(),
       hours: hours === "" || Number.isNaN(hours) ? "" : hours,
       ...totals,
@@ -830,6 +845,7 @@ function initAuth() {
 }
 
 function initServices() {
+  ensureServiceDatalist();
   const container = document.getElementById("service-lines");
   container.innerHTML = "";
   container.appendChild(createServiceLine());
