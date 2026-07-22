@@ -301,6 +301,7 @@ function normalizeInvoice(data) {
         service: data.service || "Prestation",
         serviceDetail: data.serviceDetail || "",
         hours: data.hours ?? "",
+        qty: data.qty ?? "",
         ...totals,
       },
     ];
@@ -311,6 +312,7 @@ function normalizeInvoice(data) {
         service: line.service || "Prestation",
         serviceDetail: line.serviceDetail || "",
         hours: line.hours ?? "",
+        qty: line.qty ?? "",
         ...totals,
       };
     });
@@ -328,6 +330,31 @@ function blankCell() {
   return "";
 }
 
+function parseOptionalNumber(value) {
+  if (value === "" || value === null || value === undefined) return "";
+  const n = Number(value);
+  return Number.isNaN(n) ? "" : n;
+}
+
+function formatQty(value) {
+  const n = parseOptionalNumber(value);
+  if (n === "") return blankCell();
+  return String(n).replace(".", ",");
+}
+
+function lineMontantHt(line) {
+  const qty = parseOptionalNumber(line.qty);
+  if (qty === "") return null;
+  const tarif = Number(line.amountHt) || 0;
+  return Math.round(qty * tarif * 100) / 100;
+}
+
+function lineTotalForSum(line) {
+  const montant = lineMontantHt(line);
+  if (montant !== null) return montant;
+  return Number(line.amountHt) || 0;
+}
+
 function renderInvoiceHtml(data) {
   const inv = normalizeInvoice(data);
   const isType2 = Number(inv.invoiceType) === 2;
@@ -343,12 +370,16 @@ function renderInvoiceHtml(data) {
       const detail = line.serviceDetail
         ? `<br><span style="color:#555">${escapeHtml(line.serviceDetail)}</span>`
         : "";
-      const tarifCell = isType2 ? blankCell() : money(line.amountHt);
+      const montant = lineMontantHt(line);
+      const tarifCell =
+        isType2 && !(Number(line.amountHt) > 0)
+          ? blankCell()
+          : money(line.amountHt);
       return `
         <tr>
           <td>${escapeHtml(line.service)}${detail}</td>
-          <td>${blankCell()}</td>
-          <td>${blankCell()}</td>
+          <td>${formatQty(line.qty)}</td>
+          <td>${montant === null ? blankCell() : money(montant)}</td>
           <td>${tarifCell}</td>
         </tr>`;
     })
@@ -365,16 +396,22 @@ function renderInvoiceHtml(data) {
             <th>Tarif HT</th>
           </tr>`;
 
-  const totalsBlock = isType2
+  const summedHt = Math.round(
+    inv.lines.reduce((s, l) => s + lineTotalForSum(l), 0) * 100
+  ) / 100;
+  const summedTva = Math.round(summedHt * GARAGE.tvaRate * 100) / 100;
+  const summedTtc = Math.round((summedHt + summedTva) * 100) / 100;
+
+  const totalsBlock = isType2 && !inv.lines.some((l) => Number(l.amountHt) > 0)
     ? `<div class="totals">
         <div><span>Total HT</span><span>${blankCell()}</span></div>
         <div><span>TVA (20 %)</span><span>${blankCell()}</span></div>
         <div class="grand"><span>Total TTC</span><span>${blankCell()}</span></div>
       </div>`
     : `<div class="totals">
-        <div><span>Total HT</span><span>${money(inv.amountHt)}</span></div>
-        <div><span>TVA (20 %)</span><span>${money(inv.tva)}</span></div>
-        <div class="grand"><span>Total TTC</span><span>${money(inv.ttc)}</span></div>
+        <div><span>Total HT</span><span>${money(summedHt)}</span></div>
+        <div><span>TVA (20 %)</span><span>${money(summedTva)}</span></div>
+        <div class="grand"><span>Total TTC</span><span>${money(summedTtc)}</span></div>
       </div>`;
 
   return `
@@ -461,12 +498,16 @@ function createServiceLine(data = {}) {
   const wrap = document.createElement("div");
   wrap.className = "service-line";
   const type2 = currentInvoiceType === 2;
-  const amountBlock = type2
-    ? ""
-    : `
-    <div class="field">
-      <label>Tarif HT (€) *</label>
-      <input class="line-ht" type="number" min="0" step="0.01" required placeholder="0.00" value="${data.amountHt ?? ""}" />
+  const amountBlock = `
+    <div class="row">
+      <div class="field">
+        <label>Quantité (facultatif)</label>
+        <input class="line-qty" type="number" min="0" step="0.01" placeholder="ex. 2" value="${data.qty ?? ""}" />
+      </div>
+      <div class="field grow">
+        <label>Tarif HT (€) ${type2 ? "(facultatif)" : "*"}</label>
+        <input class="line-ht" type="number" min="0" step="0.01" ${type2 ? "" : "required"} placeholder="0.00" value="${data.amountHt ?? ""}" />
+      </div>
     </div>`;
   wrap.innerHTML = `
     <div class="service-line-top">
@@ -505,25 +546,28 @@ function renumberLines() {
 }
 
 function updateLiveTotals() {
-  if (currentInvoiceType === 2) return;
+  if (currentInvoiceType === 2) {
+    // still update if tarifs filled
+  }
   const lines = [...document.querySelectorAll("#service-lines .service-line")];
   let amountHt = 0;
-  let tva = 0;
-  let ttc = 0;
   lines.forEach((el) => {
     const htInput = el.querySelector(".line-ht");
     if (!htInput) return;
-    const totals = calcTotals(htInput.value);
-    amountHt += totals.amountHt;
-    tva += totals.tva;
-    ttc += totals.ttc;
+    const tarif = Number(htInput.value) || 0;
+    const qtyRaw = el.querySelector(".line-qty")?.value;
+    const qty = parseOptionalNumber(qtyRaw);
+    amountHt += qty === "" ? tarif : Math.round(qty * tarif * 100) / 100;
   });
   amountHt = Math.round(amountHt * 100) / 100;
-  tva = Math.round(tva * 100) / 100;
-  ttc = Math.round(ttc * 100) / 100;
-  document.getElementById("live-ht").textContent = money(amountHt);
-  document.getElementById("live-tva").textContent = money(tva);
-  document.getElementById("live-ttc").textContent = money(ttc);
+  const tva = Math.round(amountHt * GARAGE.tvaRate * 100) / 100;
+  const ttc = Math.round((amountHt + tva) * 100) / 100;
+  const liveHt = document.getElementById("live-ht");
+  const liveTva = document.getElementById("live-tva");
+  const liveTtc = document.getElementById("live-ttc");
+  if (liveHt) liveHt.textContent = money(amountHt);
+  if (liveTva) liveTva.textContent = money(tva);
+  if (liveTtc) liveTtc.textContent = money(ttc);
 }
 
 function readForm() {
@@ -531,28 +575,32 @@ function readForm() {
   const lines = [...document.querySelectorAll("#service-lines .service-line")].map((el) => {
     const service = el.querySelector(".line-service").value.trim();
     const serviceDetail = el.querySelector(".line-detail").value.trim();
-    if (type2) {
+    const qty = parseOptionalNumber(el.querySelector(".line-qty")?.value);
+    const htInput = el.querySelector(".line-ht");
+    const totals = calcTotals(htInput ? htInput.value : 0);
+    if (type2 && !(Number(htInput?.value) > 0)) {
       return {
         service,
         serviceDetail,
+        qty,
         hours: "",
         amountHt: 0,
         tva: 0,
         ttc: 0,
       };
     }
-    const totals = calcTotals(el.querySelector(".line-ht").value);
     return {
       service,
       serviceDetail,
+      qty,
       hours: "",
       ...totals,
     };
   });
 
-  const amountHt = Math.round(lines.reduce((s, l) => s + l.amountHt, 0) * 100) / 100;
-  const tva = Math.round(lines.reduce((s, l) => s + l.tva, 0) * 100) / 100;
-  const ttc = Math.round(lines.reduce((s, l) => s + l.ttc, 0) * 100) / 100;
+  const amountHt = Math.round(lines.reduce((s, l) => s + lineTotalForSum(l), 0) * 100) / 100;
+  const tva = Math.round(amountHt * GARAGE.tvaRate * 100) / 100;
+  const ttc = Math.round((amountHt + tva) * 100) / 100;
 
   return {
     invoiceType: currentInvoiceType,
@@ -583,8 +631,8 @@ function applyInvoiceTypeUI() {
   const hint = document.getElementById("prestations-hint");
   if (hint) {
     hint.textContent = type2
-      ? "Facture type 2 : les cases Qté, Montant HT et Tarif HT resteront vides pour remplir à la main."
-      : "Ajoutez autant de lignes que nécessaire (ex. pièces + main d’œuvre).";
+      ? "Facture type 2 : quantité et tarif facultatifs ; cases vides si non renseignés."
+      : "Quantité facultative : si remplie, le Montant HT = quantité × tarif.";
   }
   document.querySelectorAll(".type1-only").forEach((el) => {
     el.classList.toggle("hidden-type", type2);
@@ -597,6 +645,7 @@ function setInvoiceType(type, preserveLines = true) {
         service: el.querySelector(".line-service")?.value.trim() || "",
         serviceDetail: el.querySelector(".line-detail")?.value.trim() || "",
         amountHt: el.querySelector(".line-ht")?.value ?? "",
+        qty: el.querySelector(".line-qty")?.value ?? "",
         hours: "",
       }))
     : [];
@@ -945,7 +994,7 @@ function init() {
   });
 
   document.getElementById("service-lines").addEventListener("input", (e) => {
-    if (e.target.matches(".line-ht")) updateLiveTotals();
+    if (e.target.matches(".line-ht, .line-qty")) updateLiveTotals();
   });
 
   document.getElementById("service-lines").addEventListener("click", (e) => {
