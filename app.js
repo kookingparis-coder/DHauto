@@ -429,6 +429,7 @@ function renderInvoiceHtml(data) {
       ${notes}
 
       <div class="legal">
+        <p><strong>Mode de paiement :</strong> ${escapeHtml(inv.paymentMethod || "—")}</p>
         <p><strong>Conditions de règlement :</strong> payable à réception.</p>
         <p>Pas d’escompte pour paiement anticipé.</p>
         <p>
@@ -547,6 +548,7 @@ function readForm() {
     lines,
     service: lines.map((l) => l.service).join(" · "),
     notes: document.getElementById("notes").value.trim(),
+    paymentMethod: document.getElementById("payment-method").value,
     date: document.getElementById("invoice-date").value,
     amountHt,
     tva,
@@ -567,6 +569,10 @@ function fillForm(data) {
   document.getElementById("car-model").value = inv.carModel || "";
   document.getElementById("car-km").value = inv.carKm || "";
   document.getElementById("notes").value = inv.notes || "";
+  document.getElementById("payment-method").value =
+    inv.paymentMethod === "Virement" || inv.paymentMethod === "Espèces"
+      ? inv.paymentMethod
+      : "Espèces";
   document.getElementById("invoice-date").value = inv.date || todayIso();
 
   const container = document.getElementById("service-lines");

@@ -128,6 +128,13 @@
               <input id="invoice-date" name="invoiceDate" type="date" required />
             </div>
             <div class="field">
+              <label for="payment-method">Mode de paiement *</label>
+              <select id="payment-method" name="paymentMethod" required>
+                <option value="Espèces">Espèces</option>
+                <option value="Virement">Virement</option>
+              </select>
+            </div>
+            <div class="field">
               <label for="notes">Notes / observations (facultatif)</label>
               <textarea id="notes" name="notes" rows="2" placeholder="Facultatif"></textarea>
             </div>
@@ -189,7 +196,7 @@
     </main>
   </div>
 
-  <script src="config.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="config.js?v=10"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
